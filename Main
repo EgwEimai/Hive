@@ -1,0 +1,107 @@
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <iostream>
+#include <windows.h>
+
+struct cursorinfo{
+	int x;
+	int y;
+	int event;
+};
+
+void CallBackFunc(int event, int x, int y, int flags, void * cursordata)
+{
+	cursorinfo * data = new cursorinfo;
+
+	data = (cursorinfo *)cursordata;
+	data->x = x;
+	data->y = y;
+	data->event = event;
+
+	if (event == cv::EVENT_LBUTTONDOWN)
+	{
+		std::cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+	}
+	else if (event == cv::EVENT_RBUTTONDOWN)
+	{
+		std::cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+	}
+	else if (event == cv::EVENT_MBUTTONDOWN)
+	{
+		std::cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
+	}
+	else if (event == cv::EVENT_MOUSEMOVE)
+	{
+		//std::cout << "Mouse move over the window - position (" << x << ", " << y << ")" << std::endl;
+
+	}
+}
+
+int main(int argc, char** argv)
+{
+	cursorinfo * cursordata = new cursorinfo;
+	cursordata->x = 0;
+	cursordata->y = 0;
+	cv::Mat image, image2;
+	cv::Mat cursor_image;
+
+	// Read the backround picture
+	image = cv::imread("opencv-logo.png", cv::IMREAD_UNCHANGED);
+	image2 = cv::imread("opencv-logo.png", cv::IMREAD_UNCHANGED);
+	// Read the cursor
+	cursor_image = cv::imread("cursor.png", cv::IMREAD_UNCHANGED);
+
+	// Check for invalid inputs
+	if (!image.data)
+	{
+		std::cout << "Could not open or find the image" << std::endl;
+		return -1;
+	}
+	if (!cursor_image.data)
+	{
+		std::cout << "Could not open or find the cursor image" << std::endl;
+		return -1;
+	}
+	std::vector<cv::Mat> cursorRGBA;
+	cv::split(cursor_image, cursorRGBA);
+	// Create a window for display.
+	cv::namedWindow("Display window", cv::WINDOW_AUTOSIZE);
+	cv::setMouseCallback("Display window", CallBackFunc, cursordata);
+	//Get windows handler for window
+	HWND hwnd = (HWND)cvGetWindowHandle("Display window");
+
+	//loop until close window is pressed
+	while (IsWindowVisible(hwnd)){
+
+		//cv::Rect roi(cv::Point(cursordata->x, cursordata->y), cv::Size(cursor_image.rows, cursor_image.cols));
+		//cv::Mat image_roi = image(roi);
+
+
+		//normal case for cursor
+		int width = cursor_image.rows;
+		int height = cursor_image.cols;
+		cv::Rect roi(0, 0, cursor_image.rows, cursor_image.cols);
+		if (image.cols - cursordata->x < width){
+			width = image.cols - cursordata->x;
+			roi = cv::Rect(0, 0, width, cursor_image.rows);
+		}
+		if (image.rows - cursordata->y < height){
+			height = image.rows - cursordata->y;
+			roi = cv::Rect(0, 0, width, height);
+		}
+		cursor_image(roi).copyTo(image(cv::Rect(cursordata->x, cursordata->y, width, height)), cursorRGBA[3](roi));
+
+
+
+		// std::cout << "(" << image.rows << ", " << cursordata->x << ", " << image.rows - cursordata->x << ")" << std::endl;
+		// std::cout << "(" << image.cols << ", " << cursordata->y << ", " << image.cols - cursordata->y << ")" << std::endl;
+		//image_roi.copyTo(image(cv::Rect(cursordata->x, cursordata->y, cursor_image.rows, cursor_image.cols)));
+
+		// Refresh the image.
+		cv::imshow("Display window", image);
+		//break if close window is pressed
+		if (cv::waitKey(10) == 27) break;
+		image2.copyTo(image);
+	}
+	return 0;
+}
